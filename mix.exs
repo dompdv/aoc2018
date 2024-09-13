@@ -21,9 +21,8 @@ defmodule AdventOfCode.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:nx, "~> 0.6.4"},
-      {:benchee, "~> 1.0"},
-      {:httpoison, "~> 1.8"}
+      {:benchee, "~> 1.3"},
+      {:httpoison, "~> 2.2"}
     ]
   end
 end
