@@ -50,6 +50,7 @@ defmodule AdventOfCode.Day04 do
     group_by_shifts(r, last, [Enum.to_list(m1..m2) | acc_guard], acc_group)
   end
 
+  ## Returns a Map %{guard ID => list of sleeping minutes}
   def parse_and_process(args) do
     # Parse
     args
