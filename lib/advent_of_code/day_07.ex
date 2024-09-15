@@ -54,61 +54,78 @@ defmodule AdventOfCode.Day07 do
     |> to_string()
   end
 
-  def worker_actions(minute, steps, ws) do
+  # At the start of a minute, we execute worker actions
+  # this means that we mark as "done" the steps which are finished (when the current minute reaches the expected time of the end of the task)
+  # otherwise, do nothing
+  # the worker states (ws) and the "achieved steps" state are updated
+  def execute_worker_actions(current_time, steps, ws) do
     {new_steps, new_workers_state} =
-      Enum.reduce(
-        ws,
-        {steps, []},
-        fn
-          {_, :idle} = w, {s, acc_ws} ->
-            {s, [w | acc_ws]}
+      Enum.reduce(ws, {steps, []}, fn
+        # Do nothing if a worker is idle
+        {_, :idle} = w, {s, acc_ws} ->
+          {s, [w | acc_ws]}
 
-          {_, {till_minute, _}} = w, {s, acc_ws} when minute < till_minute ->
-            {s, [w | acc_ws]}
+        # Do nothing if we have not achieved the step
+        {_, {till_time, _}} = w, {s, acc_ws} when current_time < till_time ->
+          {s, [w | acc_ws]}
 
-          {w, {_, what}}, {s, acc_ws} ->
-            {[what | s], [{w, :idle} | acc_ws]}
-        end
-      )
+        # mark step as finished and put back the worker in :idle mode
+        {w, {_, what}}, {s, acc_ws} ->
+          {[what | s], [{w, :idle} | acc_ws]}
+      end)
 
     {new_steps, new_workers_state |> Enum.reverse()}
   end
 
   def part2(args) do
+    # Compute predecessors
     predecessors = args |> parse() |> predecessors()
     result_length = length(predecessors)
-    workers_state = for w <- 1..5, do: {w, :idle}
+    # the state of workers is a ordered list [{worker number, worker state}]
+    # a worker state is either
+    # - :idle => the worker does nothing and ready to start to work on a step
+    # - {till_minute, step} => the worker will work on "step" till the "till_time" time
+    # Workers are in idle mode at first
+    initial_workers_state = for w <- 1..5, do: {w, :idle}
+    initial_finished_steps = []
 
+    # Clock is ticking till we process all steps
     Stream.iterate(0, &(&1 + 1))
     |> Enum.reduce_while(
-      {[], workers_state},
-      fn minute, {fired_steps, c_ws} ->
-        {new_fired_steps, new_c_ws} =
-          worker_actions(minute, fired_steps, c_ws)
+      {initial_finished_steps, initial_workers_state},
+      fn current_time, {finished_steps, workers_state} ->
+        # Execute potential actions by the workers, update finished_steps if necessary
+        {finished_steps, workers_state} =
+          execute_worker_actions(current_time, finished_steps, workers_state)
 
-        if length(new_fired_steps) == result_length do
-          {:halt, {minute, Enum.reverse(new_fired_steps)}}
+        # If we have executed all steps, then stop and return the time
+        if length(finished_steps) == result_length do
+          {:halt, current_time}
         else
-          next_steps = fire(new_fired_steps, predecessors)
-          in_process = for {_, {_, step}} <- new_c_ws, do: step
-          next_steps = next_steps |> Enum.reject(fn s -> s in in_process end)
-
-          idle_workers = for {w, :idle} <- new_c_ws, do: w
+          # What are the potential next_steps ?
+          potentiaL_next_steps = fire(finished_steps, predecessors)
+          # And the steps that a worker is working on
+          in_process_steps = for {_, {_, step}} <- workers_state, do: step
+          # The real next steps are the potential minus the "in process" steps
+          next_steps = Enum.reject(potentiaL_next_steps, fn s -> s in in_process_steps end)
+          # Distribute the next_steps on the idle workers
+          # When we attribute a task to a worker, his state becomes {time of the end of the task, step on which they work}
+          idle_workers = for {w, :idle} <- workers_state, do: w
 
           starting_workers =
             for {w, step} <- Enum.zip(idle_workers, next_steps),
                 into: %{},
-                do: {w, {minute + step - 4, step}}
+                do: {w, {current_time + step - 4, step}}
 
-          final_c_ws =
-            for {w, ws} <- new_c_ws do
+          # update the workers_state for the workers that have been attributed a new task
+          final_workers_state =
+            for {w, ws} <- workers_state do
               if Map.has_key?(starting_workers, w), do: {w, starting_workers[w]}, else: {w, ws}
             end
 
-          {:cont, {new_fired_steps, final_c_ws}}
+          {:cont, {finished_steps, final_workers_state}}
         end
       end
     )
-    |> elem(0)
   end
 end
