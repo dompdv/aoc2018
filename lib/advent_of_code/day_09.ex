@@ -5,36 +5,38 @@ defmodule AdventOfCode.Day09 do
   end
 
   def put({ring, ring_size, current_marble}, marble) when rem(marble, 23) == 0 do
-    where =
+    n =
       if current_marble - 7 < 0, do: current_marble - 7 + ring_size, else: current_marble - 7
 
-    {left, [removed | right]} = Enum.split(ring, where)
-    {{left ++ right, ring_size - 1, where}, removed + marble}
+    left = binary_part(ring, 0, n * 4)
+    <<removed::big-unsigned-integer-size(32)>> = binary_part(ring, n * 4, 4)
+    right = binary_slice(ring, (n * 4 + 4)..-1//1)
+    {{left <> right, ring_size - 1, n}, removed + marble}
   end
 
   def put({ring, ring_size, current_marble}, marble) do
     case rem(current_marble + 2, ring_size) do
       0 ->
-        {{ring ++ [marble], ring_size + 1, ring_size}, 0}
+        {{ring <> <<marble::unsigned-big-integer-size(32)>>, ring_size + 1, ring_size}, 0}
 
       n ->
-        {left, right} = Enum.split(ring, n)
-        {{left ++ [marble] ++ right, ring_size + 1, n}, 0}
+        left = binary_part(ring, 0, n * 4)
+        right = binary_slice(ring, (n * 4)..-1//1)
+        {{left <> <<marble::unsigned-big-integer-size(32)>> <> right, ring_size + 1, n}, 0}
     end
   end
 
-  def part1(args) do
-    {n_players, last_marble} = args |> parse()
-    ring = [0]
-    ring_size = length(ring)
-    current_marble = 0
+  def new_ring(), do: {<<0::unsigned-big-integer-size(32)>>, 1, 0}
 
+  def play({n_players, last_marble}) do
     initial_scores = for p <- 0..(n_players - 1), into: %{}, do: {p, 0}
 
     Enum.reduce(
       1..last_marble,
-      {{ring, ring_size, current_marble}, 0, initial_scores},
+      {new_ring(), 0, initial_scores},
       fn m, {r, p, scores} ->
+        if rem(m, 1000) == 0, do: IO.inspect(m)
+
         {new_r, score} = put(r, m)
 
         if score == 0,
@@ -47,29 +49,10 @@ defmodule AdventOfCode.Day09 do
     |> Enum.max()
   end
 
+  def part1(args), do: args |> parse() |> play()
+
   def part2(args) do
-    {n_players, last_marble} = args |> parse()
-    last_marble = (last_marble * 100) |> IO.inspect()
-    ring = [0]
-    ring_size = length(ring)
-    current_marble = 0
-
-    initial_scores = for p <- 0..(n_players - 1), into: %{}, do: {p, 0}
-
-    Enum.reduce(
-      1..last_marble,
-      {{ring, ring_size, current_marble}, 0, initial_scores},
-      fn m, {r, p, scores} ->
-        if rem(m, 10000) == 0, do: IO.inspect(m)
-        {new_r, score} = put(r, m)
-
-        if score == 0,
-          do: {new_r, rem(p + 1, n_players), scores},
-          else: {new_r, rem(p + 1, n_players), Map.update!(scores, p, fn s -> s + score end)}
-      end
-    )
-    |> elem(2)
-    |> Map.values()
-    |> Enum.max()
+    {p, m} = args |> parse()
+    play({p, m * 100})
   end
 end
