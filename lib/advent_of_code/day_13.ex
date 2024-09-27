@@ -110,7 +110,7 @@ defmodule AdventOfCode.Day13 do
       else: {:crash, new_cart}
   end
 
-  # Move tol
+  # Start to process one turn
   def process_carts_stop_when_crashing(carts, tracks) do
     # Ensure to process carts in the right order
     carts
@@ -132,6 +132,7 @@ defmodule AdventOfCode.Day13 do
     |> then(fn {x, y} -> "#{x},#{y}" end)
   end
 
+  # Part 2: remove carts when they collide
   def move_highlander([], acc_carts, _), do: acc_carts
 
   def move_highlander([cart | rest_cart], acc_carts, tracks) do
@@ -142,80 +143,29 @@ defmodule AdventOfCode.Day13 do
         move_highlander(rest_cart, [new_cart | acc_carts], tracks)
 
       {other_cart_pos, _, _} ->
-        IO.inspect(other_cart_pos, label: "boum")
+        # remove the carts from the list of carts to process or the carts alreay processed, and discard the current one
         new_acc_carts = Enum.reject(acc_carts, fn {pos, _, _} -> pos == other_cart_pos end)
         new_rest_carts = Enum.reject(rest_cart, fn {pos, _, _} -> pos == other_cart_pos end)
-        IO.inspect(length(new_acc_carts) - length(acc_carts), label: "acc_carts")
-        IO.inspect(length(new_rest_carts) - length(rest_cart), label: "rest_carts")
-
-        if length(new_acc_carts) + length(new_rest_carts) == 1,
-          do: {:only_one, new_acc_carts ++ new_rest_carts},
-          else: move_highlander(new_rest_carts, new_acc_carts, tracks)
+        move_highlander(new_rest_carts, new_acc_carts, tracks)
     end
   end
 
   def move_highlander(carts, tracks) do
-    ordered_carts =
-      Enum.sort(carts, fn {{x1, y1}, _, _}, {{x2, y2}, _, _} -> {y1, x1} <= {y2, x2} end)
-
-    move_highlander(ordered_carts, [], tracks)
+    # Ensure the right order
+    carts
+    |> Enum.sort(fn {{x1, y1}, _, _}, {{x2, y2}, _, _} -> {y1, x1} <= {y2, x2} end)
+    |> move_highlander([], tracks)
   end
 
   def part2(args) do
-    {tracks, carts} = args |> test4() |> parse()
+    {tracks, carts} = args |> parse()
 
     Stream.iterate(0, &(&1 + 1))
     |> Enum.reduce_while(carts, fn _, c_carts ->
-      IO.inspect(c_carts, label: "Loop")
-
-      case move_highlander(c_carts, tracks) do
-        {:only_one, {pos, _, _}} -> {:halt, pos}
-        new_carts -> {:cont, new_carts}
-      end
+      new_carts = move_highlander(c_carts, tracks)
+      # Stop if there is only one cart left
+      if length(new_carts) == 1, do: {:halt, elem(hd(new_carts), 0)}, else: {:cont, new_carts}
     end)
-  end
-
-  def test1(_) do
-    """
-    /->--\\
-    |    ^
-    |    |
-    \\----/
-    """
-  end
-
-  def test2(_) do
-    """
-    /-----\\
-    |     |
-    |  /--+--\\
-    |  |  |  |
-    \\--+--/  |
-    |     |
-    \\-----/
-    """
-  end
-
-  def test3(_) do
-    """
-    /->-\\
-    |   |  /----\\
-    | /-+--+-\\  |
-    | | |  | v  |
-    \\-+-/  \\-+--/
-    \\------/
-    """
-  end
-
-  def test4(_) do
-    """
-    />-<\\
-    |   |
-    | /<+-\\
-    | | | v
-    \\>+</ |
-    |   ^
-    \\<->/
-    """
+    |> then(fn {x, y} -> "#{x},#{y}" end)
   end
 end
