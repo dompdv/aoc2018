@@ -31,9 +31,8 @@ defmodule AdventOfCode.Day14 do
       |> Enum.reduce_while(
         initial_state(),
         fn i, s ->
-          {r, n_digits, _, _} = new_s = cook(s)
-          IO.inspect(new_s)
-          if i > 10, do: raise("strop")
+          {_r, n_digits, _, _} = new_s = cook(s)
+          if rem(i, 1000) == 0, do: IO.inspect(i)
 
           if n_digits > rounds + 20,
             do: {:halt, new_s},
