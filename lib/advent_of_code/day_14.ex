@@ -1,28 +1,47 @@
 defmodule AdventOfCode.Day14 do
   def parse(args), do: args |> String.trim() |> String.to_integer()
 
-  def cook({recipes, elf1, elf2}) do
-    v = recipes[elf1] + recipes[elf2]
-    last_index = map_size(recipes)
-
-    {recipes, last_index} =
-      if div(v, 10) > 0,
-        do: {Map.put(recipes, last_index, div(v, 10)), last_index + 1},
-        else: {recipes, last_index}
-
-    {recipes, last_index} = {Map.put(recipes, last_index, rem(v, 10)), last_index + 1}
-    elf1 = rem(elf1 + recipes[elf1] + 1, last_index)
-    elf2 = rem(elf2 + recipes[elf2] + 1, last_index)
-    {recipes, elf1, elf2}
+  # n is a number
+  # i : i-th number of the decimal representation of n, starting from 0 = most significant digit
+  def extract(n, n_digits, i) do
+    l = n_digits - (i + 1)
+    rem(div(n, Integer.pow(10, l)), 10)
   end
 
-  def initial_state(), do: {%{0 => 3, 1 => 7}, 0, 1}
+  def cook({recipes, n_digits, elf1, elf2}) do
+    v = extract(recipes, n_digits, elf1) + extract(recipes, n_digits, elf2)
+
+    {recipes, n_digits} =
+      if div(v, 10) > 0,
+        do: {recipes * 100 + v, n_digits + 2},
+        else: {recipes * 10 + v, n_digits + 1}
+
+    elf1 = rem(elf1 + extract(recipes, n_digits, elf1) + 1, n_digits)
+    elf2 = rem(elf2 + extract(recipes, n_digits, elf2) + 1, n_digits)
+    {recipes, n_digits, elf1, elf2}
+  end
+
+  def initial_state(), do: {37, 2, 0, 1}
 
   def part1(args) do
     rounds = args |> parse()
 
-    {r, _, _} = Enum.reduce(1..rounds, initial_state(), fn _, s -> cook(s) end)
-    for(s <- rounds..(rounds + 9), do: Integer.to_string(r[s])) |> Enum.join()
+    {r, n_digits, _, _} =
+      Stream.iterate(0, &(&1 + 1))
+      |> Enum.reduce_while(
+        initial_state(),
+        fn i, s ->
+          {r, n_digits, _, _} = new_s = cook(s)
+          IO.inspect(new_s)
+          if i > 10, do: raise("strop")
+
+          if n_digits > rounds + 20,
+            do: {:halt, new_s},
+            else: {:cont, new_s}
+        end
+      )
+
+    for(s <- rounds..(rounds + 9), do: extract(r, n_digits, s))
   end
 
   def print({r, e1, e2} = s, n) do
