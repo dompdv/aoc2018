@@ -42,10 +42,15 @@ defmodule AdventOfCode.Day14 do
       fn _i, s ->
         {r, _, _} = new_s = cook(s)
         t = map_size(r)
-        tail = for i <- (t - len_target)..(t - 1), do: r[i]
-        if tail == target, do: {:halt, new_s}, else: {:cont, new_s}
+        tail1 = for i <- (t - len_target)..(t - 1), do: r[i]
+        tail2 = for i <- (t - len_target - 1)..(t - 2), do: r[i]
+
+        cond do
+          tail1 == target -> {:halt, map_size(r) - len_target}
+          tail2 == target -> {:halt, map_size(r) - len_target - 1}
+          true -> {:cont, new_s}
+        end
       end
     )
-    |> then(fn {r, _, _} -> map_size(r) - len_target end)
   end
 end
