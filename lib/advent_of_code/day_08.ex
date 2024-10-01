@@ -5,7 +5,8 @@ defmodule AdventOfCode.Day08 do
   # A tree is represented by a root node %{meta: [list of metadata], children: [list of children nodes]}
   def build_tree(description), do: build_node(description) |> elem(1)
 
-  def build_node([qchildren, qmetadata | r]) do
+  def build_node(description) do
+    [qchildren, qmetadata | r] = description
     # "r" is the remainder of the list after processing
     # Attention: "r" is rebound several times
 
