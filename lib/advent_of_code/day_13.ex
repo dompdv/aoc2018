@@ -118,18 +118,15 @@ defmodule AdventOfCode.Day13 do
     |> process_carts_stop_when_crashing([], tracks)
   end
 
-  def part1(args) do
-    {tracks, carts} = args |> parse()
+  def find_crash({tracks, carts}) do
+    case process_carts_stop_when_crashing(carts, tracks) do
+      {:crash, {pos, _, _}} -> pos
+      new_carts -> find_crash({tracks, new_carts})
+    end
+  end
 
-    # compute each turn till a crash
-    Stream.iterate(0, &(&1 + 1))
-    |> Enum.reduce_while(carts, fn _, c_carts ->
-      case process_carts_stop_when_crashing(c_carts, tracks) do
-        {:crash, {pos, _, _}} -> {:halt, pos}
-        new_carts -> {:cont, new_carts}
-      end
-    end)
-    |> then(fn {x, y} -> "#{x},#{y}" end)
+  def part1(args) do
+    args |> parse() |> find_crash() |> then(fn {x, y} -> "#{x},#{y}" end)
   end
 
   # Part 2: remove carts when they collide
@@ -157,15 +154,15 @@ defmodule AdventOfCode.Day13 do
     |> move_highlander([], tracks)
   end
 
-  def part2(args) do
-    {tracks, carts} = args |> parse()
+  def find_survivor({tracks, carts}) do
+    new_carts = move_highlander(carts, tracks)
 
-    Stream.iterate(0, &(&1 + 1))
-    |> Enum.reduce_while(carts, fn _, c_carts ->
-      new_carts = move_highlander(c_carts, tracks)
-      # Stop if there is only one cart left
-      if length(new_carts) == 1, do: {:halt, elem(hd(new_carts), 0)}, else: {:cont, new_carts}
-    end)
-    |> then(fn {x, y} -> "#{x},#{y}" end)
+    if length(new_carts) == 1,
+      do: elem(hd(new_carts), 0),
+      else: find_survivor({tracks, new_carts})
+  end
+
+  def part2(args) do
+    args |> parse() |> find_survivor() |> then(fn {x, y} -> "#{x},#{y}" end)
   end
 end
