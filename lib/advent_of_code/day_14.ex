@@ -32,25 +32,22 @@ defmodule AdventOfCode.Day14 do
     for(s <- rounds..(rounds + 9), do: Integer.to_string(r[s])) |> Enum.join()
   end
 
+  def search(s, target, len_target) do
+    {r, _, _} = new_s = cook(s)
+    t = map_size(r)
+    tail1 = for i <- (t - len_target)..(t - 1), do: r[i]
+    tail2 = for i <- (t - len_target - 1)..(t - 2), do: r[i]
+
+    cond do
+      tail1 == target -> map_size(r) - len_target
+      tail2 == target -> map_size(r) - len_target - 1
+      true -> search(new_s, target, len_target)
+    end
+  end
+
   def part2(args) do
     target = args |> String.trim() |> to_charlist() |> Enum.map(&(&1 - ?0))
     len_target = length(target)
-
-    Stream.iterate(0, &(&1 + 1))
-    |> Enum.reduce_while(
-      initial_state(),
-      fn _i, s ->
-        {r, _, _} = new_s = cook(s)
-        t = map_size(r)
-        tail1 = for i <- (t - len_target)..(t - 1), do: r[i]
-        tail2 = for i <- (t - len_target - 1)..(t - 2), do: r[i]
-
-        cond do
-          tail1 == target -> {:halt, map_size(r) - len_target}
-          tail2 == target -> {:halt, map_size(r) - len_target - 1}
-          true -> {:cont, new_s}
-        end
-      end
-    )
+    search(initial_state(), target, len_target)
   end
 end
